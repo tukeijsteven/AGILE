@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Church Registration System</title>
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="agile.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <header>
+    <div class="brand">
+      <i class="fa-solid fa-church"></i>
+      <span>Church Registration System</span>
+    </div>
+    <div class="user-info">
+      <span id="current-context" class="badge"><i class="fa-solid fa-location-dot"></i> Select a Church</span>
+      <button id="btn-logout" class="secondary hidden"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="toast-container"></div>
+
+    <!-- STEP 1: CHOOSE CHURCH -->
+    <div id="section-choose-church" class="card">
+      <h2 style="font-size: 1.5rem; font-weight: 700;">Step 1: Choose Your Church</h2>
+      <p style="color: var(--text-muted); margin-top: 0.25rem;">Search and select your church ministry to register for services & events.</p>
+      
+      <!-- SEARCH INPUT -->
+      <div class="search-box">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="church-search" placeholder="Search church by name or location..." oninput="filterChurches()">
+      </div>
+
+      <div class="church-grid" id="church-list"></div>
+    </div>
+
+    <!-- STEP 2: AUTHENTICATION -->
+    <div id="section-auth" class="card hidden">
+      <div class="nav-tabs">
+        <button id="tab-login" class="active"><i class="fa-solid fa-key"></i> Log In</button>
+        <button id="tab-register"><i class="fa-solid fa-user-plus"></i> Create Account</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="form-login">
+        <h3 style="margin-bottom: 1.25rem;">Log In to <span class="selected-church-name" style="color: var(--primary);"></span></h3>
+        <div class="form-group">
+          <label for="login-email">Email Address</label>
+          <input type="email" id="login-email" placeholder="e.g. member@phaneroo.org" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" placeholder="••••••••" required>
+        </div>
+        <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap;">
+          <button type="submit"><i class="fa-solid fa-right-to-bracket"></i> Log In</button>
+          <button type="button" class="secondary" onclick="resetToChurchSelection()"><i class="fa-solid fa-arrow-left"></i> Change Church</button>
+          <button type="button" id="btn-admin-login" class="secondary"><i class="fa-solid fa-shield-halved"></i> Admin Login</button>
+        </div>
+      </form>
+
+      <!-- Register Form -->
+      <form id="form-register" class="hidden">
+        <h3 style="margin-bottom: 1.25rem;">Create Account for <span class="selected-church-name" style="color: var(--primary);"></span></h3>
+        <div class="form-group">
+          <label for="reg-name">Full Name</label>
+          <input type="text" id="reg-name" placeholder="John Doe" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-email">Email Address</label>
+          <input type="email" id="reg-email" placeholder="john@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-password">Password</label>
+          <input type="password" id="reg-password" placeholder="Create password" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-role">Account Type</label>
+          <select id="reg-role">
+            <option value="member">Church Member</option>
+            <option value="organizer">Event Organizer</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+          <button type="submit"><i class="fa-solid fa-user-check"></i> Register Account</button>
+          <button type="button" class="secondary" onclick="resetToChurchSelection()"><i class="fa-solid fa-arrow-left"></i> Change Church</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="section-dashboard" class="hidden">
+      <div class="nav-tabs">
+        <button id="tab-events" class="active"><i class="fa-solid fa-calendar-days"></i> Church Services & Events</button>
+        <button id="tab-my-registrations"><i class="fa-solid fa-ticket"></i> My Registrations</button>
+        <button id="tab-organizer" class="hidden"><i class="fa-solid fa-sliders"></i> Organizer Console</button>
+        <button id="tab-admin" class="hidden"><i class="fa-solid fa-shield-halved"></i> Admin Console</button>
+      </div>
+
+      <!-- VIEW EVENTS -->
+      <div id="view-events" class="card">
+        <h2 style="font-size: 1.25rem; font-weight: 700;">Upcoming Events</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Browse event posters and register for upcoming services.</p>
+        <div class="event-grid" id="events-container"></div>
+      </div>
+
+      <!-- VIEW MY REGISTRATIONS -->
+      <div id="view-my-registrations" class="card hidden">
+        <h2 style="font-size: 1.25rem; font-weight: 700;">My Registered Events</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Manage all events you are currently registered to attend.</p>
+        <div id="my-registrations-container" class="table-responsive"></div>
+      </div>
+
+      <!-- ORGANIZER PANEL WITH POSTER UPLOAD -->
+      <div id="view-organizer" class="card hidden">
+        <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Create New Event & Upload Poster</h2>
+        <form id="form-create-event" style="margin-bottom: 2.5rem;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+            <div class="form-group">
+              <label for="event-title">Event Title</label>
+              <input type="text" id="event-title" placeholder="e.g. Sunday Celebration Service" required>
+            </div>
+            <div class="form-group">
+              <label for="event-date">Date & Time</label>
+              <input type="datetime-local" id="event-date" required>
+            </div>
+            <div class="form-group">
+              <label for="event-venue">Venue</label>
+              <input type="text" id="event-venue" placeholder="e.g. Kololo Airstrip" required>
+            </div>
+          </div>
+
+          <!-- EVENT POSTER IMAGE UPLOAD -->
+          <div class="form-group">
+            <label for="event-poster-file"><i class="fa-solid fa-image"></i> Event Poster / Picture</label>
+            <input type="file" id="event-poster-file" accept="image/*" onchange="previewUploadedImage(event)">
+            
+            <div class="poster-preview-box" id="preview-box">
+              <img id="poster-img-preview" src="" alt="Poster Preview">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="event-desc">Event Description</label>
+            <textarea id="event-desc" rows="3" placeholder="Provide event details..." required></textarea>
+          </div>
+          <button type="submit"><i class="fa-solid fa-plus"></i> Publish Event</button>
+        </form>
+
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 2rem 0;">
+
+        <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Manage Published Events</h2>
+        <div id="organizer-events-list"></div>
+      </div>
+
+      <!-- ADMIN CONSOLE FOR CHURCH CREATION -->
+      <div id="view-admin" class="card hidden">
+        <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Administrator Console</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Create a new church and make it available in the system.</p>
+        <form id="form-create-church">
+          <div class="form-group">
+            <label for="church-name">Church Name</label>
+            <input type="text" id="church-name" placeholder="e.g. Grace Fellowship Church" required>
+          </div>
+          <div class="form-group">
+            <label for="church-location">Location</label>
+            <input type="text" id="church-location" placeholder="e.g. Nairobi, Kenya" required>
+          </div>
+          <div class="form-group">
+            <label for="church-website">Website</label>
+            <input type="url" id="church-website" placeholder="https://example.org" required>
+          </div>
+
+          <div class="form-group">
+            <label for="church-image-file"><i class="fa-solid fa-image"></i> Church Picture</label>
+            <input type="file" id="church-image-file" accept="image/*" onchange="previewChurchImage(event)">
+            <div class="poster-preview-box" id="church-preview-box">
+              <img id="church-img-preview" src="" alt="Church Preview">
+            </div>
+          </div>
+
+          <button type="submit"><i class="fa-solid fa-plus"></i> Add Church</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let uploadedPosterBase64 = null;
+    let uploadedChurchImageBase64 = null;
+
+    // MOCK DATA WITH PICTURES
+    const DB = {
+      churches: [
+        { 
+          id: '1', 
+          name: 'Phaneroo Ministries International', 
+          location: 'Kampala, Uganda',
+          website: 'https://phaneroo.org/',
+          image: 'PICTURES/Phaneroo%20logo.png'
+        },
+        { 
+          id: '2', 
+          name: 'Apokalupsis Ministries', 
+          location: 'Kampala, Uganda',
+          website: 'https://www.apokalupsisministries.org/',
+          image: 'PICTURES/Apokalupsis%20logo.jpeg'
+        }
+      ],
+      users: [
+        { id: 'u1', churchId: '1', name: 'John Member', email: 'john@phaneroo.org', password: '123', role: 'member' },
+        { id: 'u2', churchId: '1', name: 'Phaneroo Admin', email: 'admin@phaneroo.org', password: '123', role: 'organizer' },
+        { id: 'u3', churchId: '2', name: 'Apokalupsis Admin', email: 'admin@apokalupsis.org', password: '123', role: 'organizer' },
+        { id: 'u4', name: 'System Administrator', email: 'john@gmail.com', password: '123', role: 'admin' }
+      ],
+      events: [
+        { 
+          id: 'e1', 
+          churchId: '1', 
+          title: 'Thursday Service Rehearsal', 
+          date: '2026-10-08 17:00', 
+          venue: 'Kololo Airstrip, Kampala', 
+          desc: 'Preparation and choir worship session for the weekly service.',
+          image: 'PICTURES/Phaneroo%20Thursday%20Service%20Event.jpeg'
+        },
+        { 
+          id: 'e2', 
+          churchId: '1', 
+          title: 'Phaneroo Annual Anniversary', 
+          date: '2026-11-12 09:00', 
+          venue: 'Kololo Airstrip, Kampala', 
+          desc: 'Grand celebration gathering of praise, worship, and thanksgiving.',
+          image: 'PICTURES/Phaneroo%20Sunday%20Service%20Event.jpeg'
+        },
+        { 
+          id: 'e3', 
+          churchId: '2', 
+          title: 'Apokalupsis Prophetic Night', 
+          date: '2026-10-16 18:00', 
+          venue: 'Main Auditorium, Kampala', 
+          desc: 'An evening of deep worship, deliverance, and spiritual revelation.',
+          image: 'PICTURES/Apokalupsis%20Wednesday%20Service%20Event.jpeg'
+        },
+        {
+          id: 'e4',
+          churchId: '2',
+          title: 'Apokalupsis Sunday Service',
+          date: '2026-10-20 09:00',
+          venue: 'Main Auditorium, Kampala',
+          desc: 'A vibrant Sunday gathering with worship, prayer, and teaching.',
+          image: 'PICTURES/Apokalupsis%20SundayService%20Event.jpeg'
+        },
+        {
+          id: 'e5',
+          churchId: '2',
+          title: 'Apokalupsis Anniversary',
+          date: '2026-11-05 10:00',
+          venue: 'Main Auditorium, Kampala',
+          desc: 'Celebrating God’s faithfulness and the church’s anniversary.',
+          image: 'PICTURES/Apokalupsis%20Aninversary%20Event.jpeg'
+        },
+        {
+          id: 'e6',
+          churchId: '1',
+          title: 'Global Inter University Conference',
+          date: '2026-12-01 08:30',
+          venue: 'International Conference Centre',
+          desc: 'A global gathering for students and young leaders.',
+          image: 'PICTURES/Global%20Inter%20University%20Conference%20Event.jpg'
+        }
+      ],
+      registrations: []
+    };
+
+    let state = {
+      selectedChurch: null,
+      currentUser: null
+    };
+
+    const churchListEl = document.getElementById('church-list');
+    const churchSearchInput = document.getElementById('church-search');
+    const toastContainer = document.getElementById('toast-container');
+    const headerContext = document.getElementById('current-context');
+    const btnLogout = document.getElementById('btn-logout');
+
+    const secChooseChurch = document.getElementById('section-choose-church');
+    const secAuth = document.getElementById('section-auth');
+    const secDashboard = document.getElementById('section-dashboard');
+
+    const tabLogin = document.getElementById('tab-login');
+    const tabRegister = document.getElementById('tab-register');
+    const formLogin = document.getElementById('form-login');
+    const formRegister = document.getElementById('form-register');
+
+    const tabEvents = document.getElementById('tab-events');
+    const tabMyRegs = document.getElementById('tab-my-registrations');
+    const tabOrganizer = document.getElementById('tab-organizer');
+    const tabAdmin = document.getElementById('tab-admin');
+
+    const viewEvents = document.getElementById('view-events');
+    const viewMyRegs = document.getElementById('view-my-registrations');
+    const viewOrganizer = document.getElementById('view-organizer');
+    const viewAdmin = document.getElementById('view-admin');
+
+    const btnAdminLogin = document.getElementById('btn-admin-login');
+
+    function init() {
+      renderChurches(DB.churches);
+      attachEvents();
+    }
+
+    function showToast(message, isError = false) {
+      const toast = document.createElement('div');
+      toast.className = `alert-toast ${isError ? 'alert-error' : 'alert-success'}`;
+      toast.innerHTML = `<i class="fa-solid ${isError ? 'fa-circle-exclamation' : 'fa-circle-check'}"></i> ${message}`;
+      toastContainer.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function renderChurches(churchesToRender) {
+      if (churchesToRender.length === 0) {
+        churchListEl.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 2rem 0;">
+            <i class="fa-solid fa-church-slash" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+            <p>No churches found matching your query.</p>
+          </div>`;
+        return;
+      }
+
+      churchListEl.innerHTML = churchesToRender.map(c => `
+        <div class="church-card" onclick="selectChurch('${c.id}')">
+          <img src="${c.image || 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=800&q=80'}" alt="${c.name}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 10px; margin-bottom: 0.5rem;">
+          <i class="fa-solid fa-church"></i>
+          <h3 style="font-size: 1.1rem; font-weight: 600;">${c.name}</h3>
+          <span style="font-size: 0.85rem; color: var(--text-muted);"><i class="fa-solid fa-location-dot"></i> ${c.location}</span>
+          <span style="font-size: 0.75rem; color: var(--primary);">${c.website}</span>
+        </div>
+      `).join('');
+    }
+
+    function filterChurches() {
+      const query = churchSearchInput.value.toLowerCase().trim();
+      const filtered = DB.churches.filter(c => 
+        c.name.toLowerCase().includes(query) || 
+        c.location.toLowerCase().includes(query)
+      );
+      renderChurches(filtered);
+    }
+
+    function selectChurch(id) {
+      state.selectedChurch = DB.churches.find(c => c.id === id);
+      document.querySelectorAll('.selected-church-name').forEach(el => el.textContent = state.selectedChurch.name);
+      headerContext.innerHTML = `<i class="fa-solid fa-church"></i> ${state.selectedChurch.name}`;
+      
+      secChooseChurch.classList.add('hidden');
+      secAuth.classList.remove('hidden');
+    }
+
+    function resetToChurchSelection() {
+      state.selectedChurch = null;
+      state.currentUser = null;
+      secAuth.classList.add('hidden');
+      secDashboard.classList.add('hidden');
+      btnLogout.classList.add('hidden');
+      secChooseChurch.classList.remove('hidden');
+      headerContext.innerHTML = `<i class="fa-solid fa-location-dot"></i> Select a Church`;
+      tabAdmin.classList.add('hidden');
+      tabOrganizer.classList.add('hidden');
+    }
+
+    // IMAGE UPLOAD PREVIEW HANDLER
+    function previewUploadedImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          uploadedPosterBase64 = e.target.result;
+          const previewImg = document.getElementById('poster-img-preview');
+          const previewBox = document.getElementById('preview-box');
+          previewImg.src = uploadedPosterBase64;
+          previewBox.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // CHURCH IMAGE UPLOAD PREVIEW HANDLER
+    function previewChurchImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          uploadedChurchImageBase64 = e.target.result;
+          const previewImg = document.getElementById('church-img-preview');
+          const previewBox = document.getElementById('church-preview-box');
+          previewImg.src = uploadedChurchImageBase64;
+          previewBox.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function attachEvents() {
+      tabLogin.addEventListener('click', () => {
+        tabLogin.classList.add('active');
+        tabRegister.classList.remove('active');
+        formLogin.classList.remove('hidden');
+        formRegister.classList.add('hidden');
+      });
+
+      tabRegister.addEventListener('click', () => {
+        tabRegister.classList.add('active');
+        tabLogin.classList.remove('active');
+        formRegister.classList.remove('hidden');
+        formLogin.classList.add('hidden');
+      });
+
+      formLogin.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const pass = document.getElementById('login-password').value;
+
+        const user = DB.users.find(u => u.email === email && u.password === pass && u.churchId === state.selectedChurch.id);
+        if (user) {
+          state.currentUser = user;
+          loginSuccess();
+        } else {
+          showToast('Invalid credentials for this church.', true);
+        }
+      });
+
+      formRegister.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('reg-name').value;
+        const email = document.getElementById('reg-email').value;
+        const password = document.getElementById('reg-password').value;
+        const role = document.getElementById('reg-role').value;
+
+        const existing = DB.users.find(u => u.email === email && u.churchId === state.selectedChurch.id);
+        if (existing) {
+          showToast('Account with this email already exists for this church.', true);
+          return;
+        }
+
+        const newUser = { id: 'u' + (DB.users.length + 1), churchId: state.selectedChurch.id, name, email, password, role };
+        DB.users.push(newUser);
+        state.currentUser = newUser;
+        showToast('Account created successfully!');
+        loginSuccess();
+      });
+
+      tabEvents.addEventListener('click', () => switchDashTab('events'));
+      tabMyRegs.addEventListener('click', () => switchDashTab('my-regs'));
+      tabOrganizer.addEventListener('click', () => switchDashTab('organizer'));
+      tabAdmin.addEventListener('click', () => switchDashTab('admin'));
+
+      btnLogout.addEventListener('click', resetToChurchSelection);
+
+      // EVENT CREATION WITH IMAGE
+      document.getElementById('form-create-event').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const title = document.getElementById('event-title').value;
+        const date = document.getElementById('event-date').value.replace('T', ' ');
+        const venue = document.getElementById('event-venue').value;
+        const desc = document.getElementById('event-desc').value;
+
+        // Default image fallback if no poster is uploaded
+        const defaultImg = 'https://images.unsplash.com/photo-1543702160-32a0d9ba7fbf?auto=format&fit=crop&w=600&q=80';
+
+        const newEvent = {
+          id: 'e' + (DB.events.length + 1),
+          churchId: state.selectedChurch.id,
+          title, 
+          date, 
+          venue, 
+          desc,
+          image: uploadedPosterBase64 || defaultImg
+        };
+
+        DB.events.push(newEvent);
+        showToast('Event with poster published successfully!');
+        
+        // Reset Form & Preview Box
+        document.getElementById('form-create-event').reset();
+        document.getElementById('preview-box').style.display = 'none';
+        uploadedPosterBase64 = null;
+
+        renderDashboard();
+      });
+
+      // ADMIN CHURCH CREATION FORM
+      document.getElementById('form-create-church').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('church-name').value.trim();
+        const location = document.getElementById('church-location').value.trim();
+        const website = document.getElementById('church-website').value.trim();
+
+        const churchExists = DB.churches.some(c => c.name.toLowerCase() === name.toLowerCase());
+        if (churchExists) {
+          showToast('A church with this name already exists.', true);
+          return;
+        }
+
+        const newChurch = {
+          id: String(DB.churches.length + 1),
+          name,
+          location,
+          website
+        };
+
+        DB.churches.push(newChurch);
+        renderChurches(DB.churches);
+        document.getElementById('form-create-church').reset();
+        document.getElementById('church-preview-box').style.display = 'none'; // Reset preview box
+        uploadedChurchImageBase64 = null; // Clear uploaded image data
+        showToast('Church added successfully!');
+      });
+
+      // ADMIN LOGIN BUTTON
+      document.getElementById('btn-admin-login').addEventListener('click', () => {
+        const email = document.getElementById('login-email').value.trim();
+        const pass = document.getElementById('login-password').value.trim();
+
+        const adminUser = DB.users.find(u => u.email === email && u.password === pass && u.role === 'admin');
+        if (adminUser) {
+          state.currentUser = adminUser;
+          state.selectedChurch = null;
+          secAuth.classList.add('hidden');
+          secDashboard.classList.remove('hidden');
+          btnLogout.classList.remove('hidden');
+          headerContext.innerHTML = `<i class="fa-solid fa-shield-halved"></i> System Administrator`;
+          tabAdmin.classList.remove('hidden');
+          switchDashTab('admin');
+          showToast('Administrator login successful.');
+        } else {
+          showToast('Invalid administrator credentials.', true);
+        }
+      });
+    }
+
+    function loginSuccess() {
+      secAuth.classList.add('hidden');
+      secDashboard.classList.remove('hidden');
+      btnLogout.classList.remove('hidden');
+
+      headerContext.innerHTML = `<i class="fa-solid fa-user"></i> ${state.currentUser.name} (${state.selectedChurch.name})`;
+
+      if (state.currentUser.role === 'organizer') {
+        tabOrganizer.classList.remove('hidden');
+      } else {
+        tabOrganizer.classList.add('hidden');
+      }
+
+      if (state.currentUser.role === 'admin') {
+        tabAdmin.classList.remove('hidden');
+      } else {
+        tabAdmin.classList.add('hidden');
+      }
+
+      switchDashTab('events');
+    }
+
+    function switchDashTab(tab) {
+      [tabEvents, tabMyRegs, tabOrganizer, tabAdmin].forEach(t => t.classList.remove('active'));
+      [viewEvents, viewMyRegs, viewOrganizer, viewAdmin].forEach(v => v.classList.add('hidden'));
+
+      if (tab === 'events') {
+        tabEvents.classList.add('active');
+        viewEvents.classList.remove('hidden');
+      } else if (tab === 'my-regs') {
+        tabMyRegs.classList.add('active');
+        viewMyRegs.classList.remove('hidden');
+      } else if (tab === 'organizer') {
+        tabOrganizer.classList.add('active');
+        viewOrganizer.classList.remove('hidden');
+      } else if (tab === 'admin') {
+        tabAdmin.classList.add('active');
+        viewAdmin.classList.remove('hidden');
+      }
+      renderDashboard();
+    }
+
+    function renderDashboard() {
+      if (state.currentUser && state.currentUser.role === 'admin') {
+        return;
+      }
+
+      renderChurchEvents();
+      renderMyRegistrations();
+      if (state.currentUser && state.currentUser.role === 'organizer') {
+        renderOrganizerConsole();
+      }
+    }
+
+    function renderChurchEvents() {
+      const events = DB.events.filter(e => e.churchId === state.selectedChurch.id);
+      const container = document.getElementById('events-container');
+
+      if (events.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted);">No upcoming events scheduled for this church.</p>';
+        return;
+      }
+
+      container.innerHTML = events.map(e => {
+        const isRegistered = DB.registrations.some(r => r.eventId === e.id && r.userId === state.currentUser.id);
+        return `
+          <div class="event-card">
+            <img src="${e.image}" alt="${e.title}" class="event-poster">
+            <div class="event-content">
+              <div>
+                <h3>${e.title}</h3>
+                <div class="event-meta">
+                  <span><i class="fa-regular fa-clock"></i> ${e.date}</span>
+                  <span><i class="fa-solid fa-location-dot"></i> ${e.venue}</span>
+                </div>
+                <p style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--text-muted);">${e.desc}</p>
+              </div>
+              <div>
+                ${isRegistered ? 
+                  `<button class="danger" style="width: 100%;" onclick="cancelRegistration('${e.id}')"><i class="fa-solid fa-xmark"></i> Cancel Registration</button>` : 
+                  `<button style="width: 100%;" onclick="registerForEvent('${e.id}')"><i class="fa-solid fa-check"></i> Register Now</button>`
+                }
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function registerForEvent(eventId) {
+      DB.registrations.push({
+        id: 'r' + (DB.registrations.length + 1),
+        eventId,
+        userId: state.currentUser.id
+      });
+      showToast('Successfully registered for the event!');
+      renderDashboard();
+    }
+
+    function cancelRegistration(eventId) {
+      const idx = DB.registrations.findIndex(r => r.eventId === eventId && r.userId === state.currentUser.id);
+      if (idx !== -1) {
+        DB.registrations.splice(idx, 1);
+        showToast('Registration cancelled.');
+        renderDashboard();
+      }
+    }
+
+    function renderMyRegistrations() {
+      const myRegs = DB.registrations.filter(r => r.userId === state.currentUser.id);
+      const container = document.getElementById('my-registrations-container');
+
+      if (myRegs.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted);">You have not registered for any events yet.</p>';
+        return;
+      }
+
+      const eventsList = myRegs.map(r => DB.events.find(e => e.id === r.eventId)).filter(Boolean);
+
+      container.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Poster</th>
+              <th>Event Title</th>
+              <th>Date & Time</th>
+              <th>Venue</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${eventsList.map(e => `
+              <tr>
+                <td><img src="${e.image}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px;"></td>
+                <td style="font-weight: 600;">${e.title}</td>
+                <td>${e.date}</td>
+                <td>${e.venue}</td>
+                <td><button class="danger" style="padding: 0.4rem 0.75rem; font-size: 0.8rem;" onclick="cancelRegistration('${e.id}')"><i class="fa-solid fa-trash"></i> Cancel</button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderOrganizerConsole() {
+      const events = DB.events.filter(e => e.churchId === state.selectedChurch.id);
+      const container = document.getElementById('organizer-events-list');
+
+      if (events.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted);">No events published yet.</p>';
+        return;
+      }
+
+      container.innerHTML = events.map(e => {
+        const regs = DB.registrations.filter(r => r.eventId === e.id);
+        const attendees = regs.map(r => DB.users.find(u => u.id === r.userId)).filter(Boolean);
+
+        return `
+          <div style="border: 1px solid var(--border); padding: 1.25rem; border-radius: var(--radius); margin-bottom: 1rem; background: var(--bg); display: flex; gap: 1.25rem; align-items: flex-start;">
+            <img src="${e.image}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;">
+            <div style="flex: 1;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h3 style="font-size: 1.1rem; font-weight: 600;">${e.title}</h3>
+                <span class="badge"><i class="fa-solid fa-users"></i> ${regs.length} Registered</span>
+              </div>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                <strong>Date:</strong> ${e.date} | <strong>Venue:</strong> ${e.venue}
+              </p>
+              <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.5rem;">Registered Attendees:</h4>
+              ${attendees.length === 0 ? '<p style="font-size: 0.85rem; color: var(--text-muted);">No members registered yet.</p>' : `
+                <ul style="padding-left: 1.25rem; font-size: 0.9rem;">
+                  ${attendees.map(a => `<li>${a.name} (${a.email})</li>`).join('')}
+                </ul>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAdminConsole() {
+      const container = document.getElementById('view-admin');
+      // Admin console can show stats, recent registrations, or other admin-specific info
+      container.innerHTML += `
+        <h3 style="font-size: 1rem; font-weight: 500; margin-bottom: 1rem;">System Statistics</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(0, 123, 255, 0.1);">
+              <i class="fa-solid fa-church" style="color: #007bff;"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-number">${DB.churches.length}</span>
+              <span class="stat-label">Total Churches</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(40, 167, 69, 0.1);">
+              <i class="fa-solid fa-user" style="color: #28a745;"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-number">${DB.users.filter(u => u.role === 'member').length}</span>
+              <span class="stat-label">Total Members</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(255, 193, 7, 0.1);">
+              <i class="fa-solid fa-calendar" style="color: #ffc107;"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-number">${DB.events.length}</span>
+              <span class="stat-label">Total Events</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(220, 53, 69, 0.1);">
+              <i class="fa-solid fa-ban" style="color: #dc3545;"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-number">${DB.registrations.length}</span>
+              <span class="stat-label">Total Registrations</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    init();
+  </script>
+</body>
+</html>
