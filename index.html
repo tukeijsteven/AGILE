@@ -13,10 +13,10 @@
 
   <!-- NAVBAR -->
   <header>
-    <div class="brand">
+    <a id="logo-link" class="brand" href="index.html" title="Home">
       <i class="fa-solid fa-church"></i>
       <span>Church Registration System</span>
-    </div>
+    </a>
     <div class="user-info">
       <span id="current-context" class="badge"><i class="fa-solid fa-location-dot"></i> Select a Church</span>
       <button id="btn-logout" class="secondary hidden"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
@@ -79,6 +79,10 @@
         <div class="form-group">
           <label for="reg-password">Password</label>
           <input type="password" id="reg-password" placeholder="Create password" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-phone">Phone Number</label>
+          <input type="tel" id="reg-phone" placeholder="+2567XXXXXXXX" required>
         </div>
         <div class="form-group">
           <label for="reg-role">Account Type</label>
@@ -150,7 +154,10 @@
             <label for="event-desc">Event Description</label>
             <textarea id="event-desc" rows="3" placeholder="Provide event details..." required></textarea>
           </div>
-          <button type="submit"><i class="fa-solid fa-plus"></i> Publish Event</button>
+          <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+            <button type="submit"><i class="fa-solid fa-plus"></i> Publish Event</button>
+            <button type="button" id="btn-cancel-edit" class="secondary hidden"><i class="fa-solid fa-ban"></i> Cancel Edit</button>
+          </div>
         </form>
 
         <hr style="border: 0; border-top: 1px solid var(--border); margin: 2rem 0;">
@@ -194,6 +201,7 @@
   <script>
     let uploadedPosterBase64 = null;
     let uploadedChurchImageBase64 = null;
+    let editingEventId = null;
 
     // MOCK DATA WITH PICTURES
     const DB = {
@@ -215,6 +223,7 @@
       ],
       users: [
         { id: 'u1', churchId: '1', name: 'John', email: 'john@phaneroo.com', password: '123', role: 'member' },
+        {id: 'u1', churchId: '2', name: 'John', email: 'john@apokalupsis.com', password: '123', role: 'member' },
         { id: 'u2', churchId: '1', name: 'Admin', email: 'admin@phaneroo.com', password: '123', role: 'organizer' },
         { id: 'u3', churchId: '2', name: 'Admin', email: 'admin@apokalupsis.com', password: '123', role: 'organizer' },
         { id: 'u4', name: 'Admin', email: 'john@gmail.com', password: '123', role: 'admin' }
@@ -445,6 +454,7 @@
         const name = document.getElementById('reg-name').value;
         const email = document.getElementById('reg-email').value;
         const password = document.getElementById('reg-password').value;
+        const phone = document.getElementById('reg-phone').value;
         const role = document.getElementById('reg-role').value;
 
         const existing = DB.users.find(u => u.email === email && u.churchId === state.selectedChurch.id);
@@ -453,7 +463,7 @@
           return;
         }
 
-        const newUser = { id: 'u' + (DB.users.length + 1), churchId: state.selectedChurch.id, name, email, password, role };
+        const newUser = { id: 'u' + (DB.users.length + 1), churchId: state.selectedChurch.id, name, email, password, phone, role };
         DB.users.push(newUser);
         state.currentUser = newUser;
         showToast('Account created successfully!');
@@ -467,35 +477,87 @@
 
       btnLogout.addEventListener('click', resetToChurchSelection);
 
+      // Logo (home) click: navigate to home and push a history entry so Back can return
+      const logoLink = document.getElementById('logo-link');
+      if (logoLink) {
+        logoLink.addEventListener('click', (ev) => {
+          // If already on this page, prevent default and push a hash state
+          const path = location.pathname || '';
+          if (path.endsWith('index.html') || path === '/' ) {
+            ev.preventDefault();
+            history.pushState({home: true}, '', '#home');
+            resetToChurchSelection();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+          // If on another page, default navigation to index.html will occur and browser back works normally
+        });
+      }
+
       // EVENT CREATION WITH IMAGE
-      document.getElementById('form-create-event').addEventListener('submit', (e) => {
+      const formCreateEventEl = document.getElementById('form-create-event');
+      const formCreateEventBtn = formCreateEventEl.querySelector('button[type="submit"]');
+      const btnCancelEdit = document.getElementById('btn-cancel-edit');
+
+      // Cancel edit resets the form and clears editing state
+      if (btnCancelEdit) {
+        btnCancelEdit.addEventListener('click', () => {
+          editingEventId = null;
+          formCreateEventEl.reset();
+          document.getElementById('preview-box').style.display = 'none';
+          uploadedPosterBase64 = null;
+          formCreateEventBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Publish Event';
+          btnCancelEdit.classList.add('hidden');
+        });
+      }
+
+      formCreateEventEl.addEventListener('submit', (e) => {
         e.preventDefault();
         const title = document.getElementById('event-title').value;
-        const date = document.getElementById('event-date').value.replace('T', ' ');
+        const dateInput = document.getElementById('event-date').value;
+        const date = dateInput ? dateInput.replace('T', ' ') : '';
         const venue = document.getElementById('event-venue').value;
         const desc = document.getElementById('event-desc').value;
 
         // Default image fallback if no poster is uploaded
         const defaultImg = 'https://images.unsplash.com/photo-1543702160-32a0d9ba7fbf?auto=format&fit=crop&w=600&q=80';
 
-        const newEvent = {
-          id: 'e' + (DB.events.length + 1),
-          churchId: state.selectedChurch.id,
-          title, 
-          date, 
-          venue, 
-          desc,
-          image: uploadedPosterBase64 || defaultImg
-        };
+        if (editingEventId) {
+          // Update existing event
+          const ev = DB.events.find(x => x.id === editingEventId);
+          if (ev) {
+            ev.title = title;
+            ev.date = date || ev.date;
+            ev.venue = venue;
+            ev.desc = desc;
+            if (uploadedPosterBase64) ev.image = uploadedPosterBase64;
+            showToast('Event updated successfully!');
+          }
 
-        DB.events.push(newEvent);
-        showToast('Event with poster published successfully!');
-        
+          // Reset editing state
+          editingEventId = null;
+          formCreateEventBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Publish Event';
+          if (btnCancelEdit) btnCancelEdit.classList.add('hidden');
+        } else {
+          const newEvent = {
+            id: 'e' + (DB.events.length + 1),
+            churchId: state.selectedChurch.id,
+            title,
+            date,
+            venue,
+            desc,
+            image: uploadedPosterBase64 || defaultImg
+          };
+
+          DB.events.push(newEvent);
+          showToast('Event with poster published successfully!');
+        }
+
         // Reset Form & Preview Box
-        document.getElementById('form-create-event').reset();
+        formCreateEventEl.reset();
         document.getElementById('preview-box').style.display = 'none';
         uploadedPosterBase64 = null;
 
+        // Return to organizer list
         renderDashboard();
       });
 
@@ -613,7 +675,15 @@
       }
 
       container.innerHTML = events.map(e => {
-        const isRegistered = DB.registrations.some(r => r.eventId === e.id && r.userId === state.currentUser.id);
+        const isRegistered = state.currentUser ? DB.registrations.some(r => r.eventId === e.id && r.userId === state.currentUser.id) : false;
+        // If the current user is an organizer for this church, show Edit button instead of Register
+        const actionBtn = (state.currentUser && state.currentUser.role === 'organizer') ?
+          `<button style="width: 100%;" onclick="editEvent('${e.id}')"><i class="fa-solid fa-pen-to-square"></i> Edit Event</button>` :
+          (isRegistered ?
+            `<button class="danger" style="width: 100%;" onclick="cancelRegistration('${e.id}')"><i class="fa-solid fa-xmark"></i> Cancel Registration</button>` :
+            `<button style="width: 100%;" onclick="registerForEvent('${e.id}')"><i class="fa-solid fa-check"></i> Register Now</button>`
+          );
+
         return `
           <div class="event-card">
             <img src="${e.image}" alt="${e.title}" class="event-poster">
@@ -627,10 +697,7 @@
                 <p style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--text-muted);">${e.desc}</p>
               </div>
               <div>
-                ${isRegistered ? 
-                  `<button class="danger" style="width: 100%;" onclick="cancelRegistration('${e.id}')"><i class="fa-solid fa-xmark"></i> Cancel Registration</button>` : 
-                  `<button style="width: 100%;" onclick="registerForEvent('${e.id}')"><i class="fa-solid fa-check"></i> Register Now</button>`
-                }
+                ${actionBtn}
               </div>
             </div>
           </div>
@@ -711,9 +778,12 @@
           <div style="border: 1px solid var(--border); padding: 1.25rem; border-radius: var(--radius); margin-bottom: 1rem; background: var(--bg); display: flex; gap: 1.25rem; align-items: flex-start;">
             <img src="${e.image}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;">
             <div style="flex: 1;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; gap:0.75rem;">
                 <h3 style="font-size: 1.1rem; font-weight: 600;">${e.title}</h3>
-                <span class="badge"><i class="fa-solid fa-users"></i> ${regs.length} Registered</span>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                  <span class="badge"><i class="fa-solid fa-users"></i> ${regs.length} Registered</span>
+                  <button onclick="showAttendees('${e.id}')">View Attendees</button>
+                </div>
               </div>
               <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
                 <strong>Date:</strong> ${e.date} | <strong>Venue:</strong> ${e.venue}
@@ -721,13 +791,91 @@
               <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.5rem;">Registered Attendees:</h4>
               ${attendees.length === 0 ? '<p style="font-size: 0.85rem; color: var(--text-muted);">No members registered yet.</p>' : `
                 <ul style="padding-left: 1.25rem; font-size: 0.9rem;">
-                  ${attendees.map(a => `<li>${a.name} (${a.email})</li>`).join('')}
+                  ${attendees.map(a => `<li>${a.name} (${a.email}) - ${a.phone || '—'}</li>`).join('')}
                 </ul>
               `}
             </div>
           </div>
         `;
       }).join('');
+    }
+
+    function editEvent(eventId) {
+      const ev = DB.events.find(e => e.id === eventId);
+      if (!ev) {
+        showToast('Event not found.', true);
+        return;
+      }
+
+      // Ensure organizer tab/view is visible
+      switchDashTab('organizer');
+
+      // Populate form with event data
+      document.getElementById('event-title').value = ev.title || '';
+      // Only set datetime-local if event.date looks like YYYY-MM-DD HH:MM
+      const m = ev.date && ev.date.match(/^(\d{4}-\d{2}-\d{2})\s(\d{2}:\d{2})/);
+      if (m) {
+        document.getElementById('event-date').value = `${m[1]}T${m[2]}`;
+      } else {
+        document.getElementById('event-date').value = '';
+      }
+      document.getElementById('event-venue').value = ev.venue || '';
+      document.getElementById('event-desc').value = ev.desc || '';
+
+      // Show poster preview
+      const previewImg = document.getElementById('poster-img-preview');
+      const previewBox = document.getElementById('preview-box');
+      previewImg.src = ev.image || '';
+      previewBox.style.display = 'block';
+      uploadedPosterBase64 = ev.image && ev.image.startsWith('data:') ? ev.image : null;
+
+      // Set editing state and change submit button label
+      editingEventId = ev.id;
+      const formCreateEventEl = document.getElementById('form-create-event');
+      const formCreateEventBtn = formCreateEventEl.querySelector('button[type="submit"]');
+      formCreateEventBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Update Event';
+      const btnCancelEdit = document.getElementById('btn-cancel-edit');
+      if (btnCancelEdit) btnCancelEdit.classList.remove('hidden');
+
+      // Scroll to form
+      formCreateEventEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function showAttendees(eventId) {
+      const regs = DB.registrations.filter(r => r.eventId === eventId);
+      const attendees = regs.map(r => DB.users.find(u => u.id === r.userId)).filter(Boolean);
+
+      // Remove existing modal if present
+      const existing = document.getElementById('attendees-modal');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'attendees-modal';
+      overlay.className = 'modal-overlay';
+
+      let content = `
+        <div class="modal-box">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1rem;">
+            <h3 style="margin:0;">Registered Attendees</h3>
+            <button id="close-attendees">Close</button>
+          </div>
+          <div>
+      `;
+
+      if (attendees.length === 0) {
+        content += `<p style="color:var(--text-muted);">No attendees registered for this event.</p>`;
+      } else {
+        content += `<table style="width:100%; border-collapse: collapse;"><thead><tr><th style="text-align:left; padding:0.5rem; border-bottom:1px solid var(--border);">Name</th><th style="text-align:left; padding:0.5rem; border-bottom:1px solid var(--border);">Email</th><th style="text-align:left; padding:0.5rem; border-bottom:1px solid var(--border);">Phone</th></tr></thead><tbody>`;
+        content += attendees.map(a => `<tr><td style="padding:0.5rem; border-bottom:1px solid var(--border);">${a.name}</td><td style="padding:0.5rem; border-bottom:1px solid var(--border);">${a.email || '—'}</td><td style="padding:0.5rem; border-bottom:1px solid var(--border);">${a.phone || '—'}</td></tr>`).join('');
+        content += `</tbody></table>`;
+      }
+
+      content += `</div></div>`;
+
+      overlay.innerHTML = content;
+      document.body.appendChild(overlay);
+
+      document.getElementById('close-attendees').addEventListener('click', () => overlay.remove());
     }
 
     function renderAdminConsole() {
