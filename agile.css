@@ -394,9 +394,7 @@ table th {
 
 /* Responsive adjustments for mobile devices */
 @media (max-width: 720px) {
-  header {
-    padding: 0.75rem 1rem;
-  }
+  header { padding: 0.75rem 1rem; }
 
   .brand { font-size: 1rem; gap: 0.5rem; }
   .brand span { display: none; }
@@ -408,20 +406,23 @@ table th {
   .church-grid { grid-template-columns: 1fr; gap: 1rem; }
 
   .church-card { padding: 1rem; }
+  .church-card img { width: 100%; height: 110px; object-fit: cover; border-radius: 8px; }
 
+  /* Make event cards more balanced: poster and content side-by-side */
   .event-grid { grid-template-columns: 1fr; gap: 1rem; }
-  .event-poster { height: 140px; }
+  .event-card { display: flex; flex-direction: row; gap: 0.75rem; align-items: flex-start; min-height: 140px; }
+  .event-poster { width: 40%; height: 100%; object-fit: cover; flex-shrink: 0; border-radius: 8px; }
+  .event-content { width: 60%; padding: 0.5rem 0.25rem; display: flex; flex-direction: column; justify-content: space-between; }
 
-  .event-content { padding: 0.75rem; gap: 0.75rem; }
+  .event-card h3 { font-size: 1rem; }
+  .event-meta { gap: 0.25rem; }
 
   /* Make tab bar horizontally scrollable when narrow */
   .nav-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
   /* Stack action buttons and make them full width for easier tapping */
   .card > form > div[style*="display:flex"] ,
-  .card > div[style*="display:flex"] {
-    flex-direction: column;
-  }
+  .card > div[style*="display:flex"] { flex-direction: column; }
   .card button, .card .secondary, .card .danger { width: 100%; }
 
   /* Smaller poster preview on mobile */
@@ -432,14 +433,17 @@ table th {
 }
 
 @media (max-width: 420px) {
-  /* Tighten spacings for very small phones */
+  /* Tighten spacings for very small phones and stack event card */
   header { padding: 0.5rem 0.75rem; }
   .user-info { gap: 0.5rem; font-size: 0.8rem; }
   .badge { padding: 0.25rem 0.5rem; font-size: 0.65rem; }
 
-  .event-poster { height: 120px; }
-  input, select, textarea { padding: 0.6rem 0.75rem; font-size: 0.9rem; }
-  button { padding: 0.6rem 0.75rem; font-size: 0.9rem; }
+  .event-card { flex-direction: column; min-height: auto; }
+  .event-poster { width: 100%; height: 120px; border-radius: 6px; }
+  .event-content { width: 100%; padding: 0.5rem 0; }
+
+  input, select, textarea { padding: 0.6rem 0.75rem; font-size: 0.95rem; }
+  button { padding: 0.6rem 0.75rem; font-size: 0.95rem; }
 
   table th, table td { padding: 0.5rem; font-size: 0.85rem; }
 }
