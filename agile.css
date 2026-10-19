@@ -391,3 +391,55 @@ table th {
   padding: 1rem 1.25rem;
   box-shadow: var(--shadow-lg);
 }
+
+/* Responsive adjustments for mobile devices */
+@media (max-width: 720px) {
+  header {
+    padding: 0.75rem 1rem;
+  }
+
+  .brand { font-size: 1rem; gap: 0.5rem; }
+  .brand span { display: none; }
+
+  .container { margin: 1rem auto; padding: 0 1rem; }
+
+  .card { padding: 1rem; }
+
+  .church-grid { grid-template-columns: 1fr; gap: 1rem; }
+
+  .church-card { padding: 1rem; }
+
+  .event-grid { grid-template-columns: 1fr; gap: 1rem; }
+  .event-poster { height: 140px; }
+
+  .event-content { padding: 0.75rem; gap: 0.75rem; }
+
+  /* Make tab bar horizontally scrollable when narrow */
+  .nav-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Stack action buttons and make them full width for easier tapping */
+  .card > form > div[style*="display:flex"] ,
+  .card > div[style*="display:flex"] {
+    flex-direction: column;
+  }
+  .card button, .card .secondary, .card .danger { width: 100%; }
+
+  /* Smaller poster preview on mobile */
+  .poster-preview-box img { height: 120px; }
+
+  /* Modal sizing */
+  .modal-box { max-width: 560px; padding: 0.75rem; }
+}
+
+@media (max-width: 420px) {
+  /* Tighten spacings for very small phones */
+  header { padding: 0.5rem 0.75rem; }
+  .user-info { gap: 0.5rem; font-size: 0.8rem; }
+  .badge { padding: 0.25rem 0.5rem; font-size: 0.65rem; }
+
+  .event-poster { height: 120px; }
+  input, select, textarea { padding: 0.6rem 0.75rem; font-size: 0.9rem; }
+  button { padding: 0.6rem 0.75rem; font-size: 0.9rem; }
+
+  table th, table td { padding: 0.5rem; font-size: 0.85rem; }
+}
